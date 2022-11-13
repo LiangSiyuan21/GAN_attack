@@ -86,7 +86,7 @@ class SingleStageDetector(BaseDetector):
                                               gt_labels, gt_bboxes_ignore)
         return losses
 
-    def simple_test(self, img, img_metas, rescale=False, attack_mode=None, visualize_fea_pth=None):
+    def simple_test(self, img, img_metas, rescale=False, attack_mode=None, visualize_fea_pth=None, get_features=None):
         """Test function without test-time augmentation.
 
         Args:
@@ -100,7 +100,11 @@ class SingleStageDetector(BaseDetector):
                 The outer list corresponds to each image. The inner list
                 corresponds to each class.
         """
-        feat = self.extract_feat(img, visualize_fea_pth=visualize_fea_pth)
+        if get_features == True:
+            feat = self.extract_feat(img, visualize_fea_pth=visualize_fea_pth)
+            return feat
+        else:
+            feat = self.extract_feat(img, visualize_fea_pth=visualize_fea_pth)
         results_list = self.bbox_head.simple_test(
             feat, img_metas, rescale=rescale)
         
