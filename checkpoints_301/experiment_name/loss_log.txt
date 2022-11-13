@@ -1,0 +1,8 @@
+================ Training Loss (Sun Nov 13 04:23:06 2022) ================
+================ Training Loss (Sun Nov 13 04:24:07 2022) ================
+================ Training Loss (Sun Nov 13 04:26:33 2022) ================
+================ Training Loss (Sun Nov 13 04:27:35 2022) ================
+(epoch: 1, iters: 100, time: 3.089, data: 0.309) G_GAN: 0.840 G_cls_min: 53.399 G_bbox_min: 62.628 G_obj_min: 1.108 
+(epoch: 1, iters: 200, time: 3.162, data: 0.002) G_GAN: 0.942 G_cls_min: 406.557 G_bbox_min: 66.670 G_obj_min: 50.391 
+(epoch: 1, iters: 300, time: 3.144, data: 0.002) G_GAN: 2.712 G_cls_min: 285.796 G_bbox_min: 135.137 G_obj_min: 48.868 
+================ Training Loss (Sun Nov 13 04:56:10 2022) ================
