@@ -208,8 +208,8 @@ def main():
         out_log_dic = args.out_log.rsplit("/",1)[0]
         if not os.path.exists(out_log_dic):
             os.makedirs(out_log_dic)
-        if os.path.exists(args.out_log):
-            os.remove(args.out_log)
+        # if os.path.exists(args.out_log):
+            # os.remove(args.out_log)
         log = Logger(args.out_log, level='info')
     
     log.logger.info(args)
@@ -294,7 +294,7 @@ def main():
     # initilaze object detector
     # model = MMDistributedDataParallel(model, device_ids=local_rank)
     # model = MMDataParallel(model.cuda(), device_ids=[torch.cuda.current_device()])
-    find_unused_parameters = cfg.get('find_unused_parameters', False)
+    find_unused_parameters = cfg.get('find_unused_parameters', True)
     model = MMDistributedDataParallel(model.cuda(), device_ids=[torch.cuda.current_device()], broadcast_buffers=False,find_unused_parameters=find_unused_parameters)
     # model.eval()
 
@@ -434,6 +434,10 @@ def main():
         
         results_val = []
         new_data = dict()
+        rank, _ = get_dist_info()
+        if rank == 0:
+            prog_bar = mmcv.ProgressBar(len(val_data_loader.dataset))
+        time.sleep(2)
         for index, data in enumerate(val_data_loader):
             new_data['img'] = data['img'][0]
             data['img_metas'] = data['img_metas'][0]
@@ -483,9 +487,14 @@ def main():
                         for bbox_results, mask_results in result]
             results_val.extend(result)
 
-            iter_data_time = time.time()
+            if rank == 0:
+                batch_size = len(result)
+                for _ in range(batch_size * int(os.environ['WORLD_SIZE'])):
+                    prog_bar.update()
 
-        rank, _ = get_dist_info()
+        from mmdet_v2200.apis.test import collect_results_gpu
+        results_val = collect_results_gpu(results_val, len(val_data_loader.dataset))
+
         if rank == 0:
             if args.out:
                 # print('writing results to {args.out}')
@@ -500,7 +509,7 @@ def main():
                 for key in ['dynamic_intervals', 'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best']:
                     eval_kwargs.pop(key, None)
                 eval_kwargs.update(dict(metric=args.eval, **kwargs))
-                print(val_dataset.evaluate(results_val, **eval_kwargs))
+                # print(val_dataset.evaluate(results_val, **eval_kwargs))
                 log.logger.info(val_dataset.evaluate(results_val, **eval_kwargs))
 
         if epoch % 1 == 0:              # cache our model every <save_epoch_freq> epochs

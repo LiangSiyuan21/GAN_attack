@@ -21,6 +21,7 @@ from util.visualizer import Visualizer
 import torchvision
 import sys
 import os
+# os.environ["CUDA_VISIBLE_DEVICES"]="1" 
 import numpy as np
 import pandas as pd
 import torch
@@ -165,6 +166,18 @@ def parse_args():
     return args
 
 def main():
+    # if 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
+    #     rank = int(os.environ["RANK"])
+    #     world_size = int(os.environ['WORLD_SIZE'])
+    #     print(f"RANK and WORLD_SIZE in environ: {rank}/{world_size}")
+    # else:
+    #     rank = -1
+    #     world_size = -1
+    # torch.distributed.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank)
+    # local_rank = torch.distributed.get_rank()
+    # torch.cuda.set_device(local_rank)
+    # torch.distributed.barrier()
+    # device = torch.device(local_rank if torch.cuda.is_available() else "cpu")
     args = parse_args()
     if args.attack_logistics is not None:
         attack_logistics = bool(args.attack_logistics)
@@ -195,8 +208,8 @@ def main():
         out_log_dic = args.out_log.rsplit("/",1)[0]
         if not os.path.exists(out_log_dic):
             os.makedirs(out_log_dic)
-        if os.path.exists(args.out_log):
-            os.remove(args.out_log)
+        # if os.path.exists(args.out_log):
+            # os.remove(args.out_log)
         log = Logger(args.out_log, level='info')
     
     log.logger.info(args)
@@ -258,7 +271,6 @@ def main():
         samples_per_gpu=samples_per_gpu,
         workers_per_gpu=cfg.data.workers_per_gpu,
         num_gpus=args.num_gpus,
-        # workers_per_gpu=0,
         dist=distributed,
         shuffle=True)
     log.logger.info('Load data from the path:{}'.format(cfg.data.test['img_prefix']))
@@ -280,17 +292,17 @@ def main():
     log.logger.info('checkpoints have been finishe into object detection model...')
 
     # initilaze object detector
-    model = MMDataParallel(model, device_ids=[0])
+    # model = MMDistributedDataParallel(model, device_ids=local_rank)
     # model = MMDataParallel(model.cuda(), device_ids=[torch.cuda.current_device()])
-    # find_unused_parameters = cfg.get('find_unused_parameters', False)
-    # model = MMDistributedDataParallel(model.cuda(), device_ids=[torch.cuda.current_device()], broadcast_buffers=False,find_unused_parameters=find_unused_parameters)
+    find_unused_parameters = cfg.get('find_unused_parameters', False)
+    model = MMDistributedDataParallel(model.cuda(), device_ids=[torch.cuda.current_device()], broadcast_buffers=False,find_unused_parameters=find_unused_parameters)
     # model.eval()
 
     # prepare dataset (test dataset: 991 images)
-    dataset = data_loader.dataset
 
     # define the GAN
-    opt = TrainOptions().parse()   # get training options
+    # args.gpu_ids = os.environ['LOCAL_RANK']
+    opt = TrainOptions().parse(gpu_ids=os.environ['LOCAL_RANK'])   # get training options
     visualizer = Visualizer(opt)
     print('The number of training images = %d' % len(dataset))
     log.logger.info('The number of training images = %d' % len(dataset))
@@ -310,7 +322,7 @@ def main():
     tar_img = mmcv.imnormalize(tar_img, np.array([123.675, 116.28, 103.53]), np.array([58.395, 57.12, 57.375]), True)
     tar_img = torch.from_numpy(tar_img.transpose(2, 0, 1)).cuda().unsqueeze(0)
 
-    prog_bar = mmcv.ProgressBar(len(data_loader.dataset))
+    prog_bar = mmcv.ProgressBar(int(len(data_loader.dataset)))
     # results_records = [ [] for _ in range(len(results_records_iter_list))]
     # quires_records = [ [] for _ in range(len(results_records_iter_list))]
     gt_Anns = dataset.dataset.coco.imgToAnns
@@ -417,11 +429,15 @@ def main():
 
             iter_data_time = time.time()
 
-            for _ in range(opt.batch_size):
+            for _ in range(args.num_gpus):
                 prog_bar.update()
         
         results_val = []
         new_data = dict()
+        rank, _ = get_dist_info()
+        if rank == 0:
+            prog_bar = mmcv.ProgressBar(len(val_data_loader.dataset))
+        time.sleep(2)
         for index, data in enumerate(val_data_loader):
             new_data['img'] = data['img'][0]
             data['img_metas'] = data['img_metas'][0]
@@ -471,9 +487,14 @@ def main():
                         for bbox_results, mask_results in result]
             results_val.extend(result)
 
-            iter_data_time = time.time()
+            if rank == 0:
+                batch_size = len(result)
+                for _ in range(batch_size * int(os.environ['WORLD_SIZE'])):
+                    prog_bar.update()
 
-        rank, _ = get_dist_info()
+        from mmdet_v2200.apis.test import collect_results_gpu
+        results_val = collect_results_gpu(results_val, len(val_data_loader.dataset))
+
         if rank == 0:
             if args.out:
                 # print('writing results to {args.out}')
@@ -488,7 +509,7 @@ def main():
                 for key in ['dynamic_intervals', 'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best']:
                     eval_kwargs.pop(key, None)
                 eval_kwargs.update(dict(metric=args.eval, **kwargs))
-                print(val_dataset.evaluate(results_val, **eval_kwargs))
+                # print(val_dataset.evaluate(results_val, **eval_kwargs))
                 log.logger.info(val_dataset.evaluate(results_val, **eval_kwargs))
 
         if epoch % 1 == 0:              # cache our model every <save_epoch_freq> epochs

@@ -219,7 +219,9 @@ class FastModel(BaseModel):
         self.set_requires_grad(self.netG, True)  # D requires no gradients when optimizing G
         i = 0
         self.loss_G_cls_min = 1000.0
-        real_a_fea = self.target_dict['model'](return_loss=False, rescale=False, attack_mode=True, get_features=True, **{'img_metas':self.target_dict['data']['img_metas'], 'img':[self.real_A]})      
+        real_a_fea = self.target_dict['model'](return_loss=False, rescale=False, attack_mode=True, get_features=True, **{'img_metas':self.target_dict['data']['img_metas'], 'img':[self.real_A]})
+        # for temp in real_a_fea:
+            # temp = torch.from_numpy(temp.cpu().detach().numpy()).cuda()  
         
         # print("--------0-------")
         # print (real_a_fea[0].max().item())
