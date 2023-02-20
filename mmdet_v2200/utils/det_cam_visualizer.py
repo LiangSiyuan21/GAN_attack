@@ -339,6 +339,14 @@ class DetCAMVisualizer:
             renormalized_cam = np.zeros(grayscale_cam.shape, dtype=np.float32)
             images = []
             for x1, y1, x2, y2 in boxes:
+                if x1 < 0:
+                    x1 = 0
+                if y1 < 0:
+                    y1 = 0
+                if x2 < 0:
+                    x2 = 0
+                if y2 < 0:
+                    y2 = 0
                 img = renormalized_cam * 0
                 img[y1:y2,
                     x1:x2] = scale_cam_image(grayscale_cam[y1:y2,

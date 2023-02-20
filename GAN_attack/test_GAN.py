@@ -168,7 +168,7 @@ def parse_args():
     if args.options and args.eval_options:
         raise ValueError(
             '--options and --eval-options cannot be both '
-            'specified, --options is deprecated in favor of --eval-options')
+            'specified, --options is deprecated in flatest_net_D.ptha]]]]]]]]]\vor of --eval-options')
     if args.options:
         warnings.warn('--options is deprecated in favor of --eval-options')
         args.eval_options = args.options
@@ -349,7 +349,10 @@ def main():
             # result = model(return_loss=False, rescale=True, **{'img_metas':data['img_metas'].data, 'img':[GAN_model.real_A]})
             
             batch_size = len(result)
-            out_dir = args.checkpoints_dir + 'GAN_test_on_clean' 
+            # out_dir = args.checkpoints_dir + 'GAN_test_on_clean' 
+            # out_dir = args.checkpoints_dir + 'GAN_origin_KuangQi' 
+            out_dir = args.checkpoints_dir + 'GAN_perterbation'
+        # out_dir = args.checkpoints_dir + 'GAN_test_kuangQi' 
             out_per_dir = out_dir.replace('adv', 'per')
 
             if out_per_dir:
@@ -389,10 +392,13 @@ def main():
 
             if out_dir:
                 if batch_size == 1 and isinstance(GAN_model.fake_B, torch.Tensor):
-                    img_tensor = GAN_model.fake_B
+                    img_tensor = GAN_model.fake_B - GAN_model.real_A
+                    # img_tensor = GAN_model.fake_B
                     # img_tensor = GAN_model.real_A
                 else:
-                    img_tensor = GAN_model.fake_B.data[0]
+                    img_tensor = GAN_model.fake_B.data[0] - GAN_model.real_A.data[0]
+                    # img_tensor = GAN_model.fake_B.data[0]
+                    # img_tensor = GAN_model.real_A.data[0]
                 img_metas = data['img_metas'].data[0]
                 imgs = tensor2imgs(img_tensor, **img_metas[0]['img_norm_cfg'])
                 assert len(imgs) == len(img_metas)
@@ -417,7 +423,7 @@ def main():
                         result[i],
                         show=True,
                         out_file=out_file,
-                        score_thr=0.7)
+                        score_thr=1.1)
 
         
         # encode mask results

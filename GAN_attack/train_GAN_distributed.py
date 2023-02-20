@@ -294,8 +294,9 @@ def main():
     # initilaze object detector
     # model = MMDistributedDataParallel(model, device_ids=local_rank)
     # model = MMDataParallel(model.cuda(), device_ids=[torch.cuda.current_device()])
-    find_unused_parameters = cfg.get('find_unused_parameters', True)
+    find_unused_parameters = cfg.get('find_unused_parameters', False)
     model = MMDistributedDataParallel(model.cuda(), device_ids=[torch.cuda.current_device()], broadcast_buffers=False,find_unused_parameters=find_unused_parameters)
+    # model = torch.nn.DataParallel(model, [torch.cuda.current_device()])
     # model.eval()
 
     # prepare dataset (test dataset: 991 images)
@@ -420,12 +421,14 @@ def main():
                                 show=True,
                                 out_file=out_file,
                                 score_thr=0.7)
+                        del imgs, img_tensor
             
             # encode mask results
             if isinstance(result[0], tuple):
                 result = [(bbox_results, encode_mask_results(mask_results))
                         for bbox_results, mask_results in result]
             results.extend(result)
+            del result
 
             iter_data_time = time.time()
 

@@ -130,12 +130,12 @@ class FastModel(BaseModel):
         """Run forward pass; called by both functions <optimize_parameters> and <test>."""
         ori_w, ori_h = self.real_A.shape[2], self.real_A.shape[3]
         torch_normalize = torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        torch_innormalize = torchvision.transforms.Normalize((-1, -1, -1), (2, 2, 2))
+        # torch_innormalize = torchvision.transforms.Normalize((-1, -1, -1), (2, 2, 2))
         torch_ori_size = torchvision.transforms.Resize((ori_w, ori_h), interpolation=2)
         torch_new_size = torchvision.transforms.Resize((512, 512), interpolation=2) 
-        temp1 = torch_normalize(self.real_A / 255.0)
+        # temp1 = torch_normalize(self.real_A / 255.0)
         perturbation = self.netG(torch_new_size(torch_normalize(self.real_A / 255.0)))
-        temp2 = torch.min(perturbation)
+        # temp2 = torch.min(perturbation)
         perturbation = torch_ori_size(perturbation) * 12.5
         # temp2 = torch.min(perturbation)
         # perturbation = perturbation * 
