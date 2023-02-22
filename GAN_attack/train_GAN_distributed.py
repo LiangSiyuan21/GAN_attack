@@ -166,17 +166,17 @@ def parse_args():
     return args
 
 def main():
-    # if 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
-    #     rank = int(os.environ["RANK"])
-    #     world_size = int(os.environ['WORLD_SIZE'])
-    #     print(f"RANK and WORLD_SIZE in environ: {rank}/{world_size}")
-    # else:
-    #     rank = -1
-    #     world_size = -1
-    # torch.distributed.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank)
-    # local_rank = torch.distributed.get_rank()
-    # torch.cuda.set_device(local_rank)
-    # torch.distributed.barrier()
+    if 'RANK' in os.environ and 'WORLD_SIZE' in os.environ:
+        rank = int(os.environ["RANK"])
+        world_size = int(os.environ['WORLD_SIZE'])
+        print(f"RANK and WORLD_SIZE in environ: {rank}/{world_size}")
+    else:
+        rank = -1
+        world_size = -1
+    torch.distributed.init_process_group(backend='nccl', init_method='env://', world_size=world_size, rank=rank)
+    local_rank = torch.distributed.get_rank()
+    torch.cuda.set_device(local_rank)
+    torch.distributed.barrier()
     # device = torch.device(local_rank if torch.cuda.is_available() else "cpu")
     args = parse_args()
     if args.attack_logistics is not None:
@@ -246,7 +246,7 @@ def main():
         distributed = False
     else:
         distributed = True
-        init_dist(args.launcher, **cfg.dist_params)
+        # init_dist(args.launcher, **cfg.dist_params)
 
     # build the dataloader
     samples_per_gpu = cfg.data.test.pop('samples_per_gpu', 1)
@@ -495,25 +495,25 @@ def main():
                 for _ in range(batch_size * int(os.environ['WORLD_SIZE'])):
                     prog_bar.update()
 
-        from mmdet_v2200.apis.test import collect_results_gpu
-        results_val = collect_results_gpu(results_val, len(val_data_loader.dataset))
+        # from mmdet_v2200.apis.test import collect_results_gpu
+        # results_val = collect_results_gpu(results_val, len(val_data_loader.dataset))
 
-        if rank == 0:
-            if args.out:
-                # print('writing results to {args.out}')
-                log.logger.info('writing results to {}'.format(args.out))
-                mmcv.dump(results_val, args.out)
-            kwargs = {} if args.eval_options is None else args.eval_options
-            if args.format_only:
-                val_dataset.format_results(results_val, **kwargs)
-            if args.eval:
-                eval_kwargs = cfg.get('evaluation', {}).copy()
-                # hard-code way to remove EvalHook args
-                for key in ['dynamic_intervals', 'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best']:
-                    eval_kwargs.pop(key, None)
-                eval_kwargs.update(dict(metric=args.eval, **kwargs))
-                # print(val_dataset.evaluate(results_val, **eval_kwargs))
-                log.logger.info(val_dataset.evaluate(results_val, **eval_kwargs))
+        # if rank == 0:
+        #     if args.out:
+        #         # print('writing results to {args.out}')
+        #         log.logger.info('writing results to {}'.format(args.out))
+        #         mmcv.dump(results_val, args.out)
+        #     kwargs = {} if args.eval_options is None else args.eval_options
+        #     if args.format_only:
+        #         val_dataset.format_results(results_val, **kwargs)
+        #     if args.eval:
+        #         eval_kwargs = cfg.get('evaluation', {}).copy()
+        #         # hard-code way to remove EvalHook args
+        #         for key in ['dynamic_intervals', 'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best']:
+        #             eval_kwargs.pop(key, None)
+        #         eval_kwargs.update(dict(metric=args.eval, **kwargs))
+        #         # print(val_dataset.evaluate(results_val, **eval_kwargs))
+        #         log.logger.info(val_dataset.evaluate(results_val, **eval_kwargs))
 
         if epoch % 1 == 0:              # cache our model every <save_epoch_freq> epochs
             print('saving the model at the end of epoch %d, iters %d' % (epoch, total_iters))
