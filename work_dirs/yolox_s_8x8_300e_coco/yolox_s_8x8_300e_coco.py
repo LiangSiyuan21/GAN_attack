@@ -48,7 +48,7 @@ model = dict(
         type='YOLOXHead', num_classes=20, in_channels=128, feat_channels=128),
     train_cfg=dict(assigner=dict(type='SimOTAAssigner', center_radius=2.5)),
     test_cfg=dict(score_thr=0.01, nms=dict(type='nms', iou_threshold=0.65)))
-data_root = './VOCdevkit/'
+data_root = '/lustre/zhouyuguang.vendor/siyuan/data/VOCdevkit'
 dataset_type = 'Voc2CocoDataset'
 train_pipeline = [
     # dict(type='Mosaic', img_scale=(640, 640), pad_val=114.0),
